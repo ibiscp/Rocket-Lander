@@ -4,51 +4,38 @@ from gym import wrappers as wr
 import math
 import glob
 import pickle
-
-# Agent
-gamma = 0.99                        # Reward discount factor
-learning_rate = 0.00025             # Learning rate
-num_episodes = 5000                 # number of episodes
-max_steps_ep = 1000                 # default max number of steps per episode (unless env has a lower hardcoded limit)
-update_target = 1000                # number of steps to use slow target as target before updating it to latest weights
-epsilon_start = 1.0                 # probability of random action at start
-epsilon_end = 0.01                  # minimum probability of random action after linear decay period
-epsilon_decay_length = 1e5          # number of steps over which to linearly decay epsilon
-epsilon_decay_exp = 0.98            # exponential decay rate after reaching epsilon_end (per episode)
-
-# Brain
-huber_loss_delta = 1.0              # huber loss delta
-save_model_episode = 100            # interval to save model
-
-# Memory
-batch_size = 64                   # size of batch from experience replay memory for updates
-memory_capacity = 100000   # capacity of experience replay memory
-LAMBDA = 0.001      # speed of decay
-
-# Environment
-environment = 'RocketLander-v0'     # Environment name
-
-# folders
-monitorDir = 'videos'
-modelDir = 'models'
-
+import time
 from keras.models import Sequential
 from keras.layers import *
 from keras.optimizers import *
 import tensorflow as tf
+from collections import deque
+import random
 
-# Huber loss function
-def huber_loss(y_true, y_pred):
+# Agent
+gamma = 0.99                        # Reward discount factor
+learning_rate = 0.00025             # Learning rate
+num_episodes = 10000                # number of episodes
+max_steps_ep = 1000000              # default max number of steps per episode (unless env has a lower hardcoded limit)
+update_target = 1000                # number of steps to use slow target as target before updating it to latest weights
+epsilon_start = 1.0                 # probability of random action at start
+epsilon_end = 0.01                  # minimum probability of random action after linear decay period
+epsilon_decay = 0.0001              # speed of decay
+save_model_episode = 100            # interval to save model
 
-    err = y_true - y_pred
+# Brain
+huber_loss_delta = 1.0              # huber loss delta
+batch_size = 64                     # size of batch from experience replay memory for updates
 
-    cond = K.abs(err) < huber_loss_delta
-    L2 = 0.5 * K.square(err)
-    L1 = huber_loss_delta * (K.abs(err) - 0.5 * huber_loss_delta)
+# Memory
+memory_capacity = 100000   # capacity of experience replay memory
 
-    loss = tf.where(cond, L2, L1)
+# Environment
+environment = 'Breakout-ram-v0'#'RocketLander-v0'     # Environment name
 
-    return K.mean(loss)
+# folders
+monitorDir = 'videos'
+modelDir = 'models'
 
 class Brain:
 
@@ -61,15 +48,28 @@ class Brain:
         self.model = self.createModel()          # model
         self.targetModel = self.createModel()    # target model
 
+    # Huber loss function
+    def huber_loss(self, y_true, y_pred):
+
+        err = y_true - y_pred
+
+        cond = K.abs(err) < huber_loss_delta
+        L2 = 0.5 * K.square(err)
+        L1 = huber_loss_delta * (K.abs(err) - 0.5 * huber_loss_delta)
+
+        loss = tf.where(cond, L2, L1)
+
+        return K.mean(loss)
+
     # Create model
     def createModel(self):
         model = Sequential()
         model.add(Dense(units=512, activation='relu', input_dim=stateCnt))
-        #model.add(Dense(units=512, activation='relu'))
+        # model.add(Dense(units=512, activation='relu'))
         # model.add(Dense(units=512, activation='relu'))
         # model.add(Dense(units=512, activation='relu'))
         model.add(Dense(units=actionCnt, activation='linear'))
-        model.compile(loss=huber_loss, optimizer=RMSprop(lr=learning_rate))
+        model.compile(loss=self.huber_loss, optimizer=RMSprop(lr=learning_rate))
         return model
 
     # Train model using batch of random examples
@@ -100,9 +100,6 @@ class Brain:
         self.model.load_weights(file)
         self.targetModel.load_weights(file)
 
-from collections import deque
-import random
-
 class Memory:
 
     # Initialize memory
@@ -126,7 +123,6 @@ class Memory:
 class Agent:
     steps = 0
     epsilon = epsilon_start
-    epsilon_linear_step = (epsilon_start-epsilon_end)/epsilon_decay_length
 
     # Initialize agent
     def __init__(self, stateCnt, actionCnt, memoryCapacity, updateTarget, batchSize):
@@ -162,14 +158,7 @@ class Agent:
     # Decrement epsilon
     def decrementEpsilon(self, done):
         self.steps += 1
-        self.epsilon = epsilon_end + (epsilon_start - epsilon_end) * math.exp(-LAMBDA * self.steps)
-
-        # # linearly decay epsilon from epsilon_start to epsilon_end over epsilon_decay_length steps
-        # if self.steps < epsilon_decay_length:
-        #     self.epsilon -= self.epsilon_linear_step
-        # # then exponentially decay it every episode
-        # elif done:
-        #     self.epsilon *= epsilon_decay_exp
+        self.epsilon = epsilon_end + (epsilon_start - epsilon_end) * math.exp(-epsilon_decay * self.steps)
 
     # Replay saved data
     def replay(self):
@@ -177,8 +166,8 @@ class Agent:
         batchLen = len(batch)
 
         no_state = np.zeros(self.stateCnt)
-
         states = np.array([ o[0] for o in batch ])
+        #states_ = np.array([ o[3] for o in batch ])
         states_ = np.array([ (no_state if o[3] is None else o[3]) for o in batch ])
 
         p = self.brain.predict(states)
@@ -216,16 +205,19 @@ class Agent:
     # Load model
     def loadModel(self):
         try:
-            # Get last file
-            file = max(glob.glob(modelDir + "/" + environment + "*.h5"))
+            # Get files
+            files = glob.glob(modelDir + "/" + environment + "*.h5")
+            episode = -1
 
-            print(file)
+            # Get last file and episode
+            for f in files:
+                ep = int(f.split("_",1)[1].replace(".h5", ""))
+                if ep > episode:
+                    file = f
+                    episode = ep
 
             # Load NN weights
             self.brain.loadWeights(file)
-
-            # Get episode
-            episode = int(file.split("_",1)[1].replace(".h5", ""))
 
             # Read variables
             with open( file.replace(".h5","") + '.pkl', 'rb') as f:
@@ -269,6 +261,7 @@ while agent.memory.numberSamples() <= batch_size:
 
         # observe
         agent.memory.add((state, action, reward, None if done else next_state))
+        #agent.memory.add((state, action, reward, np.zeros(self.stateCnt) if done else next_state))
 
         # update next sate
         state = next_state
@@ -282,7 +275,12 @@ for ep in range(agent.episode, num_episodes + 1):
     total_reward = 0
     steps_in_episode = 0
 
-    state = env.reset()
+    try:
+        state = env.reset()
+    except:
+        time.sleep(1)
+        state = env.reset()
+        print("Erro mais foi!!")
     done = False
 
     while not done:
@@ -316,4 +314,4 @@ for ep in range(agent.episode, num_episodes + 1):
     if (ep%save_model_episode==0):
         agent.saveModel()
 
-    print('Episode %4i, Reward: %7.3f, Steps: %4i, Next eps: %6.4f'%(ep,total_reward,steps_in_episode, agent.epsilon))
+    print('Episode %4i, Reward: %8.3f, Steps: %4i, Next eps: %6.4f'%(ep,total_reward,steps_in_episode, agent.epsilon))
