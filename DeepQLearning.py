@@ -20,18 +20,19 @@ max_steps_ep = 1000000              # default max number of steps per episode (u
 update_target = 1000                # number of steps to use slow target as target before updating it to latest weights
 epsilon_start = 1.0                 # probability of random action at start
 epsilon_end = 0.01                  # minimum probability of random action after linear decay period
-epsilon_decay = 0.0001              # speed of decay
+epsilon_decay = 0.000001             # speed of decay
 save_model_episode = 100            # interval to save model
 
 # Brain
 huber_loss_delta = 1.0              # huber loss delta
-batch_size = 64                     # size of batch from experience replay memory for updates
+batch_size = 128                    # size of batch from experience replay memory for updates
 
 # Memory
-memory_capacity = 100000   # capacity of experience replay memory
+memory_capacity = 100000            # capacity of experience replay memory
 
 # Environment
-environment = 'Breakout-ram-v0'#'RocketLander-v0'     # Environment name
+#'RocketLander-v0'
+environment = 'Breakout-ram-v0'     # Environment name
 
 # folders
 monitorDir = 'videos'
@@ -65,8 +66,8 @@ class Brain:
     def createModel(self):
         model = Sequential()
         model.add(Dense(units=512, activation='relu', input_dim=stateCnt))
-        # model.add(Dense(units=512, activation='relu'))
-        # model.add(Dense(units=512, activation='relu'))
+        model.add(Dense(units=512, activation='relu'))
+        model.add(Dense(units=512, activation='relu'))
         # model.add(Dense(units=512, activation='relu'))
         model.add(Dense(units=actionCnt, activation='linear'))
         model.compile(loss=self.huber_loss, optimizer=RMSprop(lr=learning_rate))
