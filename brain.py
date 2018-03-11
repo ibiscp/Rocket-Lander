@@ -33,8 +33,6 @@ class Brain:
         model = Sequential()
         model.add(Dense(units=64, activation='relu', input_dim=self.stateCnt))
         model.add(Dense(units=64, activation='relu'))
-        # model.add(Dense(units=512, activation='relu'))
-        # model.add(Dense(units=512, activation='relu'))
         model.add(Dense(units=self.actionCnt, activation='linear'))
         model.compile(loss=self.huber_loss, optimizer=RMSprop(lr=self.learningRate))
         return model
