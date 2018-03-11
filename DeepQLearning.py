@@ -4,7 +4,6 @@ from gym import wrappers as wr
 import math
 import glob
 import pickle
-import time
 from keras.models import Sequential
 from keras.layers import *
 from keras.optimizers import *
@@ -20,7 +19,7 @@ max_steps_ep = 1000000              # default max number of steps per episode (u
 update_target = 1000                # number of steps to use slow target as target before updating it to latest weights
 epsilon_start = 1.0                 # probability of random action at start
 epsilon_end = 0.01                  # minimum probability of random action after linear decay period
-epsilon_decay = 0.000001             # speed of decay
+epsilon_decay = 0.0001              # speed of decay
 save_model_episode = 100            # interval to save model
 
 # Brain
@@ -28,11 +27,10 @@ huber_loss_delta = 1.0              # huber loss delta
 batch_size = 128                    # size of batch from experience replay memory for updates
 
 # Memory
-memory_capacity = 100000            # capacity of experience replay memory
+memory_capacity = 200000            # capacity of experience replay memory
 
 # Environment
-#'RocketLander-v0'
-environment = 'Breakout-ram-v0'     # Environment name
+environment = 'CartPole-v0'     # Environment name
 
 # folders
 monitorDir = 'videos'
@@ -65,10 +63,8 @@ class Brain:
     # Create model
     def createModel(self):
         model = Sequential()
-        model.add(Dense(units=512, activation='relu', input_dim=stateCnt))
-        model.add(Dense(units=512, activation='relu'))
-        model.add(Dense(units=512, activation='relu'))
-        # model.add(Dense(units=512, activation='relu'))
+        model.add(Dense(units=64, activation='relu', input_dim=stateCnt))
+        model.add(Dense(units=64, activation='relu'))
         model.add(Dense(units=actionCnt, activation='linear'))
         model.compile(loss=self.huber_loss, optimizer=RMSprop(lr=learning_rate))
         return model
@@ -136,6 +132,7 @@ class Agent:
         self.brain = Brain(stateCnt, actionCnt, batchSize)  # initialize brain
         self.memory = Memory(memoryCapacity)                # initialize memory
         self.rewards = []                                   # list of rewards
+        self.steps = 0                                      # total number of steps
 
     # Act based ond epsilon
     def act(self, s):
@@ -152,9 +149,10 @@ class Agent:
             self.brain.updateTargetModel()
 
     # Append reward and update episode
-    def appendReward(self, reward):
-        self.rewards.append(reward)
-        self.episode += 1
+    def appendReward(self, ep, reward):
+        self.rewards.append([ep, reward])
+        if ep != self.episode:
+            self.episode = ep
 
     # Decrement epsilon
     def decrementEpsilon(self, done):
@@ -168,7 +166,6 @@ class Agent:
 
         no_state = np.zeros(self.stateCnt)
         states = np.array([ o[0] for o in batch ])
-        #states_ = np.array([ o[3] for o in batch ])
         states_ = np.array([ (no_state if o[3] is None else o[3]) for o in batch ])
 
         p = self.brain.predict(states)
@@ -201,7 +198,7 @@ class Agent:
 
         # Save variables
         with open(file + '.pkl', 'wb') as f:
-            pickle.dump([self.episode, self.epsilon, self.steps, self.uid, self.rewards], f)
+            pickle.dump([self.episode, self.epsilon, self.steps, self.uid, self.rewards, self.memory.samples], f)
 
     # Load model
     def loadModel(self):
@@ -222,10 +219,11 @@ class Agent:
 
             # Read variables
             with open( file.replace(".h5","") + '.pkl', 'rb') as f:
-                self.episode, self.epsilon, self.steps, self.uid, self.reward = pickle.load(f)
+                self.episode, self.epsilon, self.steps, self.uid, self.rewards, self.memory.samples = pickle.load(f)
 
+            self.episode += 1
             print("\n\nFile " + file.replace(modelDir + "/", "") + " succesfuly loaded")
-            print("Continue training in episode " + str(episode) + "\n")
+            print("Continue training in episode " + str(self.episode) + "\n")
 
         except:
             print("\n\nNo file for the environment " + environment + " saved")
@@ -249,7 +247,8 @@ agent = Agent(stateCnt, actionCnt, memory_capacity, update_target, batch_size)
 agent.loadModel()
 
 # Populate memory
-while agent.memory.numberSamples() <= batch_size:
+while agent.memory.numberSamples() < memory_capacity:
+    print('Loading memory: %7i/%7i'%(agent.memory.numberSamples(),memory_capacity))
     state = env.reset()
     done = False
 
@@ -262,10 +261,11 @@ while agent.memory.numberSamples() <= batch_size:
 
         # observe
         agent.memory.add((state, action, reward, None if done else next_state))
-        #agent.memory.add((state, action, reward, np.zeros(self.stateCnt) if done else next_state))
 
         # update next sate
         state = next_state
+
+print('\nMemory Loaded: %7i/%7i\n'%(agent.memory.numberSamples(),memory_capacity))
 
 # Reset environment episode
 env = wr.Monitor(env, monitorDir, resume=True, video_callable=lambda episode_id: episode_id%100==0 or episode_id==1, uid=agent.uid)
@@ -279,9 +279,7 @@ for ep in range(agent.episode, num_episodes + 1):
     try:
         state = env.reset()
     except:
-        time.sleep(1)
-        state = env.reset()
-        print("Erro mais foi!!")
+        agent.saveModel()
     done = False
 
     while not done:
@@ -307,12 +305,46 @@ for ep in range(agent.episode, num_episodes + 1):
         state = next_state
         steps_in_episode += 1
 
-        if done or steps_in_episode > max_steps_ep:
-            done = True
-            agent.appendReward(total_reward)
+        # append data to history
+        agent.appendReward(ep, reward)
 
     # save model
     if (ep%save_model_episode==0):
         agent.saveModel()
 
-    print('Episode %4i, Reward: %8.3f, Steps: %4i, Next eps: %6.4f'%(ep,total_reward,steps_in_episode, agent.epsilon))
+    print('Episode %4i, Reward: %8.3f, Steps: %4i, Next eps: %6.4f, Total steps: %7i'%(ep,total_reward,steps_in_episode, agent.epsilon, agent.steps))
+
+print('\n\nLearning finished!\n\nPlaying games!\n')
+
+# Set epsilon to 0
+agent.epsilon = 0
+ep = 0
+
+while True:
+    ep += 1
+    total_reward = 0
+    steps_in_episode = 0
+
+    # reset and render
+    state = env.reset()
+    env.render()
+    done = False
+
+    while not done:
+        # act
+        action = agent.act(state)
+
+        # execute action
+        next_state, reward, done, _ = env.step(action)
+
+        # render
+        env.render()
+
+        # update total reward
+        total_reward += reward
+
+        # update variables
+        state = next_state
+        steps_in_episode += 1
+
+    print('Episode %4i, Reward: %8.3f, Steps: %4i, Total steps: %7i'%(ep,total_reward,steps_in_episode, agent.steps))
