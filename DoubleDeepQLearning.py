@@ -8,21 +8,20 @@ import time
 gamma = 0.99                        # Reward discount factor
 learning_rate = 0.00025             # Learning rate
 num_episodes = 10000                # number of episodes
-max_steps_ep = 1000000              # default max number of steps per episode (unless env has a lower hardcoded limit)
 update_target = 1000                # number of steps to use slow target as target before updating it to latest weights
 epsilon_start = 1.0                 # probability of random action at start
 epsilon_end = 0.01                  # minimum probability of random action after linear decay period
-epsilon_decay = 0.0001             # speed of decay
+epsilon_decay = 0.00001              # speed of decay
 save_model_episode = 100            # interval to save model
 
 # Brain
 batch_size = 128                    # size of batch from experience replay memory for updates
 
 # Memory
-memory_capacity = 200000           # capacity of experience replay memory
-
+memory_capacity = 200000            # capacity of experience replay memory
+# 200000 for CartPole
 # Environment
-environment = 'CartPole-v0'#'Breakout-ram-v0'     # Environment name
+environment = 'LunarLander-v2'#'Breakout-ram-v0'     # Environment name
 
 # folders
 monitorDir = 'videos'
@@ -73,7 +72,7 @@ while agent.memory.numberSamples() < memory_capacity:
 print('\nMemory Loaded: %7i/%7i\n'%(agent.memory.numberSamples(),memory_capacity))
 
 # Reset environment episode
-env = wr.Monitor(env, monitorDir, resume=True, video_callable=lambda episode_id: episode_id%100==0 or episode_id==1, uid=agent.uid)
+#env = wr.Monitor(env, monitorDir, resume=True, video_callable=lambda episode_id: episode_id%100==0 or episode_id==1, uid=agent.uid)
 env.episode_id = agent.episode
 
 # Train the model
@@ -111,8 +110,8 @@ for ep in range(agent.episode, num_episodes + 1):
         state = next_state
         steps_in_episode += 1
 
-        # append data to history
-        agent.appendReward(ep, reward)
+    # append data to history
+    agent.appendReward(ep, steps_in_episode, total_reward)
 
     # save model
     if (ep%save_model_episode==0):

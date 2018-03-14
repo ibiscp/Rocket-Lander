@@ -48,8 +48,8 @@ class Agent:
             self.brain.updateTargetModel()
 
     # Append reward and update episode
-    def appendReward(self, ep, reward):
-        self.rewards.append([ep, reward])
+    def appendReward(self, ep, steps, reward):
+        self.rewards.append([ep, steps, reward])
         if ep != self.episode:
             self.episode = ep
 
@@ -136,12 +136,12 @@ class Agent:
 
             # Read variables
             with open( file.replace(".h5","") + '.pkl', 'rb') as f:
-                self.episode, self.epsilon, self.steps, self.uid, self.reward, self.memory.tree = pickle.load(f)
+                self.episode, self.epsilon, self.steps, self.uid, self.rewards, self.memory.tree = pickle.load(f)
 
             self.memory.len = self.memory.tree.capacity
             self.episode += 1
             print("\n\nFile " + file.replace(modelDir + "/", "") + " succesfuly loaded")
-            print("Continue training in episode " + str(episode) + "\n")
+            print("Continue training in episode " + str(self.episode) + "\n")
 
         except:
             print("\n\nNo file for the environment " + self.environment + " saved")
