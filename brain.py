@@ -16,7 +16,7 @@ class Brain:
         self.targetModel = self.createModel()    # target model
 
     # Huber loss function
-    def huber_loss(self, y_true, y_pred, huber_loss_delta=1.0):
+    def huber_loss(self, y_true, y_pred, huber_loss_delta=2.0):
 
         err = y_true - y_pred
 

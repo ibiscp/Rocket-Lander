@@ -41,7 +41,7 @@ class Agent:
 
     # Save experience update target model if necessary
     def observe(self, sample):
-        x, y, errors = self._getTargets([(0, sample)])
+        x, y, errors = self.getTargets([(0, sample)])
         self.memory.add(errors[0], sample)
 
         if (self.steps % self.updateTarget == 0):
@@ -54,17 +54,17 @@ class Agent:
             self.episode = ep
 
     # Decrement epsilon
-    def decrementEpsilon(self, done):
+    def decrementEpsilon(self):
         self.steps += 1
         self.epsilon = self.epsilonEnd + (self.epsilonStart - self.epsilonEnd) * math.exp(-self.epsilonDecay * self.steps)
 
-    def _getTargets(self, batch):
+    # Return targets
+    def getTargets(self, batch):
         batchLen = len(batch)
 
         no_state = np.zeros(self.stateCnt)
 
         states = np.array([ o[1][0] for o in batch ])
-        #states_ = np.array([ o[1][3] for o in batch ])
         states_ = np.array([ (no_state if o[1][3] is None else o[1][3]) for o in batch ])
 
         p = self.brain.predict(states)
@@ -73,7 +73,6 @@ class Agent:
 
         x = np.zeros((batchLen, self.stateCnt))
         y = np.zeros((batchLen, self.actionCnt))
-
         errors = np.zeros(batchLen)
 
         for i in range(batchLen):
@@ -97,7 +96,7 @@ class Agent:
     def replay(self):
         batch = self.memory.sample(self.batchSize)
 
-        x, y, errors = self._getTargets(batch)
+        x, y, errors = self.getTargets(batch)
 
         #update errors
         for i in range(len(batch)):
