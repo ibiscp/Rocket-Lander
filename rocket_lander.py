@@ -24,7 +24,7 @@ If VEL_STATE is set to true, the velocities are included:
     - y velocity
     - angular velocity
 all state variables are roughly in the range [-1, 1]
-    
+
 CONTROL INPUTS
 Discrete control inputs are:
     - gimbal left
@@ -34,7 +34,7 @@ Discrete control inputs are:
     - use first control thruster
     - use second control thruster
     - no action
-    
+
 Continuous control inputs are:
     - gimbal (left/right)
     - throttle (up/down)
@@ -48,8 +48,8 @@ FPS = 60
 SCALE_S = 0.35  # Temporal Scaling, lower is faster - adjust forces appropriately
 INITIAL_RANDOM = 0.4  # Random scaling of initial velocity, higher is more difficult
 
-START_HEIGHT = 1000.0
-START_SPEED = 80.0
+START_HEIGHT = 100 #1000.0
+START_SPEED = 20 # 80.0
 
 # ROCKET
 MIN_THROTTLE = 0.4
@@ -87,6 +87,8 @@ MEAN = np.array([-0.034, -0.15, -0.016, 0.0024, 0.0024, 0.137,
 VAR = np.sqrt(np.array([0.08, 0.33, 0.0073, 0.0023, 0.0023, 0.8,
                 0.085, 0.0088, 0.063, 0.076]))
 
+MINIMUM = np.array([ -3.49287275,  -1.47140694, -11.50629873,  -0.05004346,  -0.05004346,  -1.27120465,  -2.33238076, -16.56420566,  -6.05473783, -18.61792286])
+RANGE = np.array([7.2249065, 3.27295168, 23.38906905, 20.85144141, 20.85144141,  0.80498447, 4.88770968, 32.33690354, 10.0274197,  37.44399837])
 
 class ContactDetector(contactListener):
     def __init__(self, env):
@@ -419,7 +421,8 @@ class RocketLander(gym.Env):
 
         self.stepnumber += 1
 
-        state = (state - MEAN[:len(state)]) / VAR[:len(state)]
+        #state = (state - MEAN[:len(state)]) / VAR[:len(state)]
+        state = (state - MINIMUM[:len(state)]) / RANGE[:len(state)]
 
         return np.array(state), reward, done, {}
 
