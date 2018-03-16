@@ -5,6 +5,10 @@
 \date{March 2018}
 \author{Ibis Prevedello}
 
+\newcommand{\targetUpdate}{1000}
+\newcommand{\layers}{2}
+\newcommand{\neurons}{512}
+
 \begin{document}
 \maketitle
 
@@ -14,7 +18,7 @@ The goal of this project is to study and implement a Reinforcement Learning algo
 \section{Description of the problem}
 Besides the idea is to develop an algorithm that can be used for more than one game, this report will contain only the solution for the environment called 'Rocket Landing', which is inspired on SpaceX idea of reusable rockets.
 
-\begin{figure}[h]
+\begin{figure}[!ht]
 \centering
 \includegraphics[scale=0.30]{environment}
 \caption{Game screenshot}
@@ -64,7 +68,7 @@ A algorithm well known is the Q Learning, which has the goal of finding a sequen
 
 The original Q Learning algorithm uses a table $Q(s,a)$, composed of rows of states and columns of actions. It uses the Bellman equation, which states that the expected long-term reward for a given action is equal to the immediate reward from the current action combined with the expected reward from the best future action taken at the following state.
 
-\[Q(s,a)=r_0+\gamma(r_1+\gamma r_2+\gamma^2 r_3+...)=r_0+\gamma max_a Q(s',a)\]
+\[Q(s,a)=r+\gamma(r_1+\gamma r_2+\gamma^2 r_3+...)=r+\gamma max_a Q(s',a)\]
 
 In the case of this problem, because the states are constante, it is not possible to use a table, and it is substituted by a neural network. So the goal is to update the weights of the neural network, but it follows the same equation and the same process.
 
@@ -78,7 +82,7 @@ The hyperparameters used for this project are presented in the table below:
  \hline
  $\gamma$ (reward discount factor) & 0.99 \\ 
  learning rate & 0.00025 \\
- target update (episodes) & 1000 \\ 
+ target update (episodes) & \targetUpdate{} \\ 
  $\epsilon$ start & 1.0 \\ 
  $\epsilon$ end & 0.01 \\ 
  $\epsilon$ decay & 0.0001 \\ 
@@ -98,21 +102,55 @@ When using online learning from each simulation step the problem is that the sam
 
 The solution found is to store the last $n$ experiences in a memory and instead of training the network with only one sample use a random batch from this memory, as described in \cite{experienceReplay}.
 
-\subsection{Double deep learning}
+\subsection{Target network}
+As written before, the formula for setting targets for gradiant descent is:
+
+\[Q(s,a)=r+\gamma max_a Q(s',a)\]
+
+One improvement that was implemented after some initial tests is the called target network, which is composed of two neural networks with the same structure, but the target network is frozen in time and provide stable $Q^*$ values and allows the algorithm to converge to the specified target.
+
+\[Q(s,a)=r+\gamma max_a Q^*(s',a)\]
+
+It is necessary because as the states $s$ and $s'$ are too close to each other, at each update the target shifts a little bit, not allowing the algorithm to converge to a any value. This way, the target network is update at each \targetUpdate{} steps, what is a value large enough so the algorithm can converge.
+
+A problem of this method is that it slow down the learning process. A change in the $Q$ function is propagated only after the target network is update. However, besides sacrificing speed, it adds stability and allows the algorithm to learn correct behaviour in much complicated algorithms.
+
+\subsection{Double learning}
+One problem of DQN algorithm is presented in \cite{doubleQLearning} and states that the agent tends to overestimate the Q function value, due to the $max$ in the formula. The problem is that for a given state where all the actions have the same true Q value, but the estimate is inherently noisy, the value with the highest positive error is selected and subsequently propagated further to other states. This leads to positive bias (value overestimation) and it severely impact on stability of the learning algorithm.
+
+The solution proposed is to use two separate Q functions, one function is then used to determine the maximizing action and second to estimate its value. In this algorithm because the target network is being used, $Q^*$ is not completely independent of $Q$, however it can be used to avoid this problem, changing the formula to:
+
+\[Q(s,a)=r+\gamma Q^*(s', argmax_a Q(s',a))\]
+
+Besides the Double Deep Q Network (DDQN) does not always improve performance, it benefits the stability of learning, which means that it can learn much complicated tasks.
 
 \subsection{Prioritize experience replay}
+Another improvement also possible is to change the way the memory is used to generate the batchs to train, instead of generating a random batch, it is possible to select those samples that it can learn more with \cite{prioritizedExperienceReplay}.
+
+In order to attribute a value for the samples, it is necessary to calculate an error between the $Q(s,a)$ and its target $T(S)$:
+
+\[error=|Q(s,a)-T(S)|\]
+
+Where $T$ is defined as:
+
+\[T(S)=r+\gamma Q^*(s', argmax_a Q(s',a))\]
+
+After having the error, it is necessary to convert this error to priority and then save in the memory with every sample, which is updated whithin each learning step. In order to calculate the priority of each sample it is used the following formula:
+
+\[p = (error + \epsilon)^\alpha\]
+
+The values $\epsilon$ and $\alpha$ of this formula are constant values. The value $\epsilon$ is a small number only to ensure that no transition has zero probability. And $\alpha$, can be a value between $0$ and $1$, controls the difference between high and low error.
 
 \section{Implementation}
-The algorithm here described is divided in tree different parts, the memory, the brain and the agent. Each one has its own well defined role and it is important to keep the code separated and organized.
+The algorithm here described is divided in tree different parts, the memory, the brain and the agent. Each one has its own well defined role and it is divided in different classes in order to keep the code organized and modularized.
 
 \subsection{Memory}
 The memory is necessary to keep in memory a certain number of last actions executed by the agent. It is necessary to store the experience that will be used for Experience Replay.
 
-The Experience Replay is a stratagy used to train the Neural Network not only based on the last experience, but on a batch with multiple experiences saved in the memory. For this part there are multiple ways to select this samples from the memory, random samples are one, and other more efficient algorithm is to determine an error for each sample and select those with a hier error.
-
 Each experience saved to the memory have the following information:
 
 \begin{itemize}
+	\item priority
 	\item current state
 	\item action
 	\item reward
@@ -120,31 +158,33 @@ Each experience saved to the memory have the following information:
 \end{itemize}
 
 \subsection{Brain}
-The Brain class encapsulates the Neural Network. It was defined with 2 hidden layers with 256 neurons each and ReLU activation function. The input number of neurons is the number of states and the output number of neuros is the number of actions.
-
-This network is trained in order to aproximate the Q function and the target model is a simple copy of the model, however it is updated sporadically, after 1000 steps.
+The Brain class encapsulates the Neural Network. It is defined with \layers{} hidden layers with \neurons{} neurons each and ReLU activation function. The input number of neurons is the number of states and the output number of neuros is the number of possible actions.
 
 For the loss it is using the Huber loss function, it is a loss function used in robust regression, that is less sensitive to outliers in data than the squared error loss.
 
 \subsection{Agent}
 The Agent class is a container that encapsulates all the methods for the algorithm to run, such as the act, observe, replay and epsilon decrement.
 
-Also some more higher level tasks are also implemented like save and load model, which enables the script to stop training and continue it from where it stopped.
+Also some more higher level tasks are also implemented like save and load model, which enables the script to stop training and resume it from where it stopped.
 
 \section{Results}
-The first data that is useful to analize is the evolution of rewards over the training. In image \ref{fig:fig2} is plotted this evolution and it is possible to see the the reward is improving over time, even though
+The first data that is useful to analize is the evolution of rewards over the training. In image \ref{fig:fig2} is plotted this evolution and it is possible to see how the reward is improving over time.
 
-\begin{figure}[h]
+\begin{figure}[!ht]
 \centering
-\includegraphics[scale=0.5]{rewardOverEpisodes}
+\includegraphics[scale=0.6]{rewardOverEpisodes}
 \caption{Reward over episodes}
 \label{fig:fig2}
 \end{figure}
 
 \section{Conclusions}
-Another option 
+
 
 \begin{thebibliography}{9}
+
+\bibitem{gym} 
+OpenAI Gym.
+\\\texttt{https://github.com/openai/gym}
 
 \bibitem{deepQLearning} 
 Mnih et al.
@@ -156,9 +196,15 @@ Lin L.
 \textit{Reinforcement Learning for Robots Using Neural Networks}. 
 PhD. thesis, Carnegie Mellon University Pittsburgh, 1993.
 
-\bibitem{gym} 
-OpenAI Gym.
-\\\texttt{https://github.com/openai/gym}
+\bibitem{doubleQLearning} 
+Hado van Hasselt
+\textit{Double Q-learning}.
+Advances in Neural Information Processing Systems, 2010.
+
+\bibitem{prioritizedExperienceReplay} 
+Schaul et al.
+\textit{Prioritized Experience Replay}.
+arXiv:1511.05952, 2015.
 
 \end{thebibliography}
 
