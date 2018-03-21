@@ -5,34 +5,34 @@ from agent import Agent
 import time
 
 # Agent
-gamma = 0.99                        # Reward discount factor
-learning_rate = 0.00025             # Learning rate
-num_episodes = 20000                # number of episodes
-update_target = 10000                # number of steps to use slow target as target before updating it to latest weights
-epsilon_start = 1.0                 # probability of random action at start
-epsilon_end = 0.01                  # minimum probability of random action after linear decay period
-epsilon_decay = 0.00001 # 0.000005              # speed of decay
+gamma = 0.99                        # reward discount factor
+learning_rate = 0.00025             # learning rate
+num_episodes = 30000                # number of episodes to train
+update_target = 10000  #1000        # steps to update target model
+epsilon_start = 1.0                 # start epsilon
+epsilon_end = 0.01                  # minimum epsilon
+epsilon_decay = 0.00001             # speed of decay
 save_model_episode = 100            # interval to save model
 
 # Brain
-batch_size = 32                    # size of batch from experience replay memory for updates
+batch_size = 128 #128                # size of batch from experience replay memory for updates
 
 # Memory
-memory_capacity = 100000 # 200000            # capacity of experience replay memory
+memory_capacity = 200000 # 100000   # capacity of experience replay memory
 
 # Environment
-environment = 'RocketLander-v0'#'Breakout-ram-v0'     # Environment name
+environment = 'BeamRider-ram-v0' #'RocketLander-v0'     # Environment name
 
 # folders
 monitorDir = 'videos'
 modelDir = 'models'
 
 # Start environment
-env = gym.make(environment)
+env = gym.make(environment).unwrapped
 
 # State and action variables
-stateCnt  = env.env.observation_space.shape[0]
-actionCnt = env.env.action_space.n
+stateCnt  = env.observation_space.shape[0]
+actionCnt = env.action_space.n
 
 # set seeds to 0
 env.seed(0)
@@ -44,6 +44,15 @@ epsilon_start, epsilon_end, epsilon_decay, learning_rate, environment, gamma)
 
 # Load model if exists
 agent.loadModel(modelDir)
+
+# import os
+# import matplotlib.pyplot as plt
+# observation = env.reset()
+# print(observation)
+# image = env.render(mode='rgb_array')
+#
+# print(image.shape())
+# os.system("pause")
 
 # Populate memory
 while agent.memory.numberSamples() < memory_capacity:
@@ -73,6 +82,8 @@ print('\nMemory Loaded: %7i/%7i\n'%(agent.memory.numberSamples(),memory_capacity
 # Reset environment episode
 #env = wr.Monitor(env, monitorDir, resume=True, video_callable=lambda episode_id: episode_id%100==0 or episode_id==1, uid=agent.uid)
 env.episode_id = agent.episode
+
+import os
 
 # Train the model
 for ep in range(agent.episode, num_episodes + 1):
@@ -156,4 +167,4 @@ while True:
         state = next_state
         steps_in_episode += 1
 
-    print('Episode %4i, Reward: %8.3f, Steps: %4i, Total steps: %7i'%(ep,total_reward,steps_in_episode, agent.steps))
+    print('Episode %4i, Reward: %8.3f, Steps: %4i'%(ep,total_reward,steps_in_episode))

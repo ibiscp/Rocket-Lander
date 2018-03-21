@@ -84,7 +84,8 @@ class Agent:
             if s_ is None:
                 t[a] = r
             else:
-                t[a] = r + self.gamma * pTarget_[i][ np.argmax(p_[i]) ]
+                t[a] = r + self.gamma * pTarget_[i][ np.argmax(p_[i]) ]    # Double DQN
+                #t[a] = r + self.gamma * np.amax(p_[i])                      # DQN
 
             x[i] = s
             y[i] = t

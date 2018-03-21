@@ -4,7 +4,7 @@ from sumtree import SumTree
 class Memory:
     # Constants
     e = 0.01
-    a = 0.6
+    a = 0.0  #0.6
 
     # Initialize memory
     def __init__(self, capacity):
