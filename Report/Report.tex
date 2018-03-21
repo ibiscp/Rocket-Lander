@@ -25,14 +25,14 @@ Besides the idea is to develop an algorithm that can be used for more than one g
 \label{fig:fig1}
 \end{figure}
 
-The rocket starts from a high altitude, out of the screen, as shown in image \ref{fig:fig1}, and the goal is to control it using the trusters in order to land it on a drone on the sea. The landing also needs to occur smootly in order to avoid demaging the rocket legs.
+The rocket starts from a high altitude, out of the screen, as shown in image \ref{fig:fig1}, and the goal is to control it using the thrusters in order to land it on a drone on the sea. The landing also needs to occur smoothly in order to avoid demaging to the rocket legs.
 
 \section{Formal model of the problem}
 To control the rocket it is necessary to give to the learning algorithm the actual state of the problem, called state variables and take one of the actions from the control inputs.
 After every iteration, which is a frame of the simulation, an action will be calculated and a result of that action will be returned to the algorithm as a reward and the result state.
 
 \subsection{State variables}
-For the state variables, it is possible to limit the number of variables used for the training, however it was decided to use all the data available in order to have a better control of the rocket.
+For the state variables, it is possible to limit the number of variables used for the training, however, it was decided to use all the data available in order to have a better control of the rocket.
 
 \begin{itemize}
 	\item x position
@@ -48,7 +48,7 @@ For the state variables, it is possible to limit the number of variables used fo
 \end{itemize}
 
 \subsection{Control inputs}
-Using this simulator it is possible to chose one of the two types of controls, or discrete or continuous. It was decided to use discrete control because the same code could be used to a bigger variety of other simulators inside Gym.
+Using this simulator, it is possible to choose one of the two types of controls, or discrete or continuous. It was decided to use discrete control because the same code could be used in a bigger variety of other simulators inside Gym.
 
 \begin{itemize}
 	\item gimbal left
@@ -61,16 +61,16 @@ Using this simulator it is possible to chose one of the two types of controls, o
 \end{itemize}
 
 \subsection{Reward function}
-The reward function for this environment envolves a series of variables, such as rocket's speed, distance to the goal, angle, angular velocity, fuel, ground contact and some other variables. It is only interesting to cite that the reward value improves as the rocket gets closer to the goal.
+The reward function of this environment involves a series of variables, such as rocket's speed, distance to the goal, angle, angular velocity, fuel, ground contact and some other variables. It is only interesting to cite that the reward value improves as the rocket gets closer to the goal.
 
 \section{Solution algorithm}
-A algorithm well known is the Q Learning, which has the goal of finding a sequence of actions from some state that leads to a reward. Some actions may lead to a greater reward, others may achieve the goal faster.
+A algorithm well-known is the Q Learning, which has the goal of finding a sequence of actions from some state that leads to a reward. Some actions may lead to a greater reward, others may achieve the goal faster.
 
 The original Q Learning algorithm uses a table $Q(s,a)$, composed of rows of states and columns of actions. It uses the Bellman equation, which states that the expected long-term reward for a given action is equal to the immediate reward from the current action combined with the expected reward from the best future action taken at the following state.
 
 \[Q(s,a)=r+\gamma(r_1+\gamma r_2+\gamma^2 r_3+...)=r+\gamma max_a Q(s',a)\]
 
-In the case of this problem, because the states are constante, it is not possible to use a table, and it is substituted by a neural network. So the goal is to update the weights of the neural network, but it follows the same equation and the same process.
+In the case of this problem, because the states are constant, it is not possible to use a table, and it is substituted by a neural network. So the goal is to update the weights of the neural network, but it follows the same equation and the same process.
 
 \subsection{Hyperparameters}
 The hyperparameters used for this project are presented in the table below:
@@ -93,17 +93,17 @@ The hyperparameters used for this project are presented in the table below:
 \end{center}
 
 \subsection{Exploration and exploitation}
-The way the algorithm chooses the action is called policy. A variable $\epsilon$ is used in order to help with this decision, at the beggining it is important to chose random actions in order to get a better felling about exactly what is the response of the system given an action, it is called exploration. As the iterations passes this $\epsilon$ decreases in order to fine tune the parameters, what is called exploitation.
+The way the algorithm chooses the action is called policy. A variable $\epsilon$ is used in order to help with this decision, at the beginning it is important to chose random actions in order to get a better feeling about exactly what is the response of the system given an action, it is called exploration. As the iterations pass this $\epsilon$ decreases in order to fine-tune the parameters (exploitation).
 
 \subsection{Experience replay}
-It was achnowledged by the authors of the original paper that using only a neural network to represent the Q function make it unstable \cite{deepQLearning}.
+It was acknowledged by the authors of the original paper that using only a neural network to represent the Q function make it unstable \cite{deepQLearning}.
 
-When using online learning from each simulation step the problem is that the samples feed to the neural network are higly correlated, so the network will most likely overfit and fail to generalize properly.
+When using online learning from each simulation step the problem is that the samples feed to the neural network are highly correlated, so the network will most likely over fit and fail to generalize properly.
 
 The solution found is to store the last $n$ experiences in a memory and instead of training the network with only one sample use a random batch from this memory, as described in \cite{experienceReplay}.
 
 \subsection{Target network}
-As written before, the formula for setting targets for gradiant descent is:
+As written before, the formula for setting targets for gradient descent is:
 
 \[Q(s,a)=r+\gamma max_a Q(s',a)\]
 
@@ -111,21 +111,21 @@ One improvement that was implemented after some initial tests is the called targ
 
 \[Q(s,a)=r+\gamma max_a Q^*(s',a)\]
 
-It is necessary because as the states $s$ and $s'$ are too close to each other, at each update the target shifts a little bit, not allowing the algorithm to converge to a any value. This way, the target network is update at each \targetUpdate{} steps, what is a value large enough so the algorithm can converge.
+It is necessary because as the states $s$ and $s'$ are too close to each other, at each update the target shifts a little bit, not allowing the algorithm to converge to any value. This way, the target network is update at each \targetUpdate{} steps, which is a value large enough so the algorithm can converge.
 
-A problem of this method is that it slow down the learning process. A change in the $Q$ function is propagated only after the target network is update. However, besides sacrificing speed, it adds stability and allows the algorithm to learn correct behaviour in much complicated algorithms.
+A problem of this method is that it slow down the learning process. A change in the $Q$ function is propagated only after the target network is update. However, besides sacrificing speed, it adds stability and allows the algorithm to learn correct behaviour in much more complicated algorithms.
 
 \subsection{Double learning}
-One problem of DQN algorithm is presented in \cite{doubleQLearning} and states that the agent tends to overestimate the Q function value, due to the $max$ in the formula. The problem is that for a given state where all the actions have the same true Q value, but the estimate is inherently noisy, the value with the highest positive error is selected and subsequently propagated further to other states. This leads to positive bias (value overestimation) and it severely impact on stability of the learning algorithm.
+One problem of DQN algorithm is presented in \cite{doubleQLearning} and states that the agent tends to overestimate the Q function value, due to the $max$ in the formula. The problem is that for a given state where all the actions have the same true Q value, but the estimate is inherently noisy, the value with the highest positive error is selected and subsequently propagated further to other states. This leads to positive bias (value overestimation) and it severely impacts on stability of the learning algorithm.
 
-The solution proposed is to use two separate Q functions, one function is then used to determine the maximizing action and second to estimate its value. In this algorithm because the target network is being used, $Q^*$ is not completely independent of $Q$, however it can be used to avoid this problem, changing the formula to:
+The solution proposed is to use two separate Q functions, one function is then used to determine the maximizing action and second to estimate its value. In this algorithm because the target network is being used, $Q^*$ is not completely independent of $Q$, however, it can be used to avoid this problem, changing the formula to:
 
 \[Q(s,a)=r+\gamma Q^*(s', argmax_a Q(s',a))\]
 
-Besides the Double Deep Q Network (DDQN) does not always improve performance, it benefits the stability of learning, which means that it can learn much complicated tasks.
+Besides the Double Deep Q Network (DDQN) does not always improve performance, it benefits the stability of learning, which means that it can learn much more complicated tasks.
 
 \subsection{Prioritize experience replay}
-Another improvement also possible is to change the way the memory is used to generate the batchs to train, instead of generating a random batch, it is possible to select those samples that it can learn more with \cite{prioritizedExperienceReplay}.
+Another improvement also possible is to change the way the memory is used to generate the batches to train, instead of generating a random batch, it is possible to select those samples that it can learn more with \cite{prioritizedExperienceReplay}.
 
 In order to attribute a value for the samples, it is necessary to calculate an error between the $Q(s,a)$ and its target $T(S)$:
 
@@ -135,7 +135,7 @@ Where $T$ is defined as:
 
 \[T(S)=r+\gamma Q^*(s', argmax_a Q(s',a))\]
 
-After having the error, it is necessary to convert this error to priority and then save in the memory with every sample, which is updated whithin each learning step. In order to calculate the priority of each sample it is used the following formula:
+After having the error, it is necessary to convert this error to priority and then save in the memory with every sample, which is updated whitin each learning step. In order to calculate the priority of each sample it is used the following formula:
 
 \[p = (error + \epsilon)^\alpha\]
 
@@ -160,15 +160,15 @@ Each experience saved to the memory have the following information:
 \subsection{Brain}
 The Brain class encapsulates the Neural Network. It is defined with \layers{} hidden layers with \neurons{} neurons each and ReLU activation function. The input number of neurons is the number of states and the output number of neuros is the number of possible actions.
 
-For the loss it is using the Huber loss function, it is a loss function used in robust regression, that is less sensitive to outliers in data than the squared error loss.
+For the loss it is using the Huber loss function, it is a loss function used in robust regression that is less sensitive to outliers in data than the squared error loss.
 
 \subsection{Agent}
-The Agent class is a container that encapsulates all the methods for the algorithm to run, such as the act, observe, replay and epsilon decrement.
+The Agent class is a container that encapsulates all the methods for the algorithm to run, such as the act, observe, replay and epsilon reduction.
 
-Also some more higher level tasks are also implemented like save and load model, which enables the script to stop training and resume it from where it stopped.
+Also some higher level tasks are also implemented like save and load model, which enables the script to stop training and resume it from where it stopped.
 
 \section{Results}
-The first data that is useful to analize is the evolution of rewards over the training. In image \ref{fig:fig2} is plotted this evolution and it is possible to see how the reward is improving over time.
+The first data which is useful to analyze is the evolution of rewards over the training. Image \ref{fig:fig2} shows this evolution for every episode. This first graph is very noise, and besides it is a little bit difficult to certify that the reward improves, with some data filtering this becomes pretty clear.
 
 \begin{figure}[!ht]
 \centering
@@ -177,8 +177,30 @@ The first data that is useful to analize is the evolution of rewards over the tr
 \label{fig:fig2}
 \end{figure}
 
-\section{Conclusions}
+In order to better visualize this evolution, the data was filtered, calculating the average of the reward over 100 episodes, giving the result shown in image \ref{fig:fig3}.
 
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.6]{movingAverage}
+\caption{Moving average over episodes}
+\label{fig:fig3}
+\end{figure}
+
+And lastly, only in order to check how the $\epsilon$ decay over time in order to start with completely exploration and finish with exploitation, this result is plotted in image \ref{fig:fig4}.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[scale=0.6]{Epsilon}
+\caption{Epsilon decay over episodes}
+\label{fig:fig4}
+\end{figure}
+
+\section{Conclusions}
+It was really interesting to see and implement the evolution of published papers in this field, starting with a simple Deep Q Learning, then implementing Experience Replay, using Target Network, Double Deep Q Learning and finally implementing Prioritize Experience Replay.
+
+Because this algorithm works for a variety of different Gym environments, it is not clear that every step implemented improved the learning for all environments, but overall it certainly improved performance.
+
+A future work that can be the next step for this project is to modify the neural network in order to improve its performance for other environments and also find a way to improve the speed of learning.
 
 \begin{thebibliography}{9}
 
