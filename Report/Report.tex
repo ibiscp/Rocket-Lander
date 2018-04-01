@@ -1,5 +1,8 @@
 \documentclass{article}
 \usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{float}
 \graphicspath{ {images/} }
 \title{Deep Q Learning for Rocket Landing}
 \date{March 2018}
@@ -13,7 +16,7 @@
 \maketitle
 
 \section{Introduction}
-The goal of this project is to study and implement a Reinforcement Learning algorithm in order to solve several games from the Gym Toolkit \cite{gym}. The algorithm chosen is called Deep Q Learning, and uses a Deep Neural Network to learn the Q Function. Besides the implementation, also some improvements are tried with Double Deep Q Learning and Prioritized Experience Replay in order to improve performance.
+The goal of this project is to study and implement a Reinforcement Learning algorithm in order to solve several games from the Gym Toolkit \cite{gym}. The algorithm chosen is called Deep Q Learning, and uses a Deep Neural Network to learn the Q Function. Besides the implementation, also some improvements are tried with Double Deep Q Learning and Prioritized Experience Replay in order to improve performance. The source code for this project can be accessed from my \href{https://github.com/ibiscp/Rocket-Lander}{GitHub page}.
 
 \section{Description of the problem}
 Besides the idea is to develop an algorithm that can be used for more than one game, this report will contain only the solution for the environment called 'Rocket Landing', which is inspired on SpaceX idea of reusable rockets.
@@ -168,32 +171,42 @@ The Agent class is a container that encapsulates all the methods for the algorit
 Also some higher level tasks are also implemented like save and load model, which enables the script to stop training and resume it from where it stopped.
 
 \section{Results}
-The first data which is useful to analyze is the evolution of rewards over the training. Image \ref{fig:fig2} shows this evolution for every episode. This first graph is very noise, and besides it is a little bit difficult to certify that the reward improves, with some data filtering this becomes pretty clear.
+For the results, three different data for each of the simulations made will be presented. The first graph presents the evolution of rewards over the training. The second graph, shows an average of the reward over 100 episodes in order to better visualize the evolution. And lastly, in the third graph, the $\epsilon$ decay over time in order to show de evolution starting with completely exploration and finishing with exploitation.
 
-\begin{figure}[!ht]
+The first simulation made was using only a simple Q Learning, and the result is presented in image \ref{fig:fig2}.
+
+\begin{figure}[H]
 \centering
-\includegraphics[scale=0.6]{rewardOverEpisodes}
-\caption{Reward over episodes}
+\includegraphics[scale=0.25]{rewardOverEpisodesDQN-NormalMemory}
+\includegraphics[scale=0.25]{movingAverageDQN-NormalMemory}
+\includegraphics[scale=0.25]{epsilonDQN-NormalMemory}
+\caption{Deep Q Network}
 \label{fig:fig2}
 \end{figure}
 
-In order to better visualize this evolution, the data was filtered, calculating the average of the reward over 100 episodes, giving the result shown in image \ref{fig:fig3}.
+Second, after adding the Target Network to the DQN, presented in image \ref{fig:fig3}.
 
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
-\includegraphics[scale=0.6]{movingAverage}
-\caption{Moving average over episodes}
+\includegraphics[scale=0.25]{rewardOverEpisodesTarget-DQN-NormalMemory}
+\includegraphics[scale=0.25]{movingAverageTarget-DQN-NormalMemory}
+\includegraphics[scale=0.25]{epsilonTarget-DQN-NormalMemory}
+\caption{Target Deep Q Network}
 \label{fig:fig3}
 \end{figure}
 
-And lastly, only in order to check how the $\epsilon$ decay over time in order to start with completely exploration and finish with exploitation, this result is plotted in image \ref{fig:fig4}.
+And lastly the complete Double Deep Q Network with, presented in image \ref{fig:fig4}.
 
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
-\includegraphics[scale=0.6]{Epsilon}
-\caption{Epsilon decay over episodes}
+\includegraphics[scale=0.25]{rewardOverEpisodesDouble-Target-DQN-NormalMemory}
+\includegraphics[scale=0.25]{movingAverageDouble-Target-DQN-NormalMemory}
+\includegraphics[scale=0.25]{epsilonDouble-Target-DQN-NormalMemory}
+\caption{Double Deep Q Network}
 \label{fig:fig4}
 \end{figure}
+
+It is possible to notice that on every graph the reward is improving over time, which means that the Neural Networking is learning how to play the game.
 
 \section{Conclusions}
 It was really interesting to see and implement the evolution of published papers in this field, starting with a simple Deep Q Learning, then implementing Experience Replay, using Target Network, Double Deep Q Learning and finally implementing Prioritize Experience Replay.

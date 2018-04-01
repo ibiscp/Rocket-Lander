@@ -1,0 +1,19 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Description of the problem}{}% 2
+\BOOKMARK [1][-]{section.3}{Formal model of the problem}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{State variables}{section.3}% 4
+\BOOKMARK [2][-]{subsection.3.2}{Control inputs}{section.3}% 5
+\BOOKMARK [2][-]{subsection.3.3}{Reward function}{section.3}% 6
+\BOOKMARK [1][-]{section.4}{Solution algorithm}{}% 7
+\BOOKMARK [2][-]{subsection.4.1}{Hyperparameters}{section.4}% 8
+\BOOKMARK [2][-]{subsection.4.2}{Exploration and exploitation}{section.4}% 9
+\BOOKMARK [2][-]{subsection.4.3}{Experience replay}{section.4}% 10
+\BOOKMARK [2][-]{subsection.4.4}{Target network}{section.4}% 11
+\BOOKMARK [2][-]{subsection.4.5}{Double learning}{section.4}% 12
+\BOOKMARK [2][-]{subsection.4.6}{Prioritize experience replay}{section.4}% 13
+\BOOKMARK [1][-]{section.5}{Implementation}{}% 14
+\BOOKMARK [2][-]{subsection.5.1}{Memory}{section.5}% 15
+\BOOKMARK [2][-]{subsection.5.2}{Brain}{section.5}% 16
+\BOOKMARK [2][-]{subsection.5.3}{Agent}{section.5}% 17
+\BOOKMARK [1][-]{section.6}{Results}{}% 18
+\BOOKMARK [1][-]{section.7}{Conclusions}{}% 19
