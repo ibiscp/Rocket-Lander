@@ -3,10 +3,11 @@ import numpy as np
 import math
 import pickle
 import glob
-from memory import Memory
+from memoryTree import Memory
 from brain import Brain
 
 class Agent:
+    steps = 0
 
     # Initialize agent
     def __init__(self, stateCnt, actionCnt, memoryCapacity, updateTarget,
@@ -40,7 +41,8 @@ class Agent:
 
     # Save experience update target model if necessary
     def observe(self, sample):
-        self.memory.add(sample)
+        x, y, errors = self.getTargets([(0, sample)])
+        self.memory.add(errors[0], sample)
 
         if (self.steps % self.updateTarget == 0):
             self.brain.updateTargetModel()
@@ -56,14 +58,14 @@ class Agent:
         self.steps += 1
         self.epsilon = self.epsilonEnd + (self.epsilonStart - self.epsilonEnd) * math.exp(-self.epsilonDecay * self.steps)
 
-    # Replay saved data
-    def replay(self):
-        batch = self.memory.sample(self.batchSize)
+    # Return targets
+    def getTargets(self, batch):
         batchLen = len(batch)
 
         no_state = np.zeros(self.stateCnt)
-        states = np.array([ o[0] for o in batch ])
-        states_ = np.array([ (no_state if o[3] is None else o[3]) for o in batch ])
+
+        states = np.array([ o[1][0] for o in batch ])
+        states_ = np.array([ (no_state if o[1][3] is None else o[1][3]) for o in batch ])
 
         p = self.brain.predict(states, target=False)
         p_ = self.brain.predict(states_, target=False)
@@ -71,21 +73,37 @@ class Agent:
 
         x = np.zeros((batchLen, self.stateCnt))
         y = np.zeros((batchLen, self.actionCnt))
+        errors = np.zeros(batchLen)
 
         for i in range(batchLen):
-            o = batch[i]
+            o = batch[i][1]
             s = o[0]; a = o[1]; r = o[2]; s_ = o[3]
 
             t = p[i]
+            oldVal = t[a]
             if s_ is None:
                 t[a] = r
             else:
-                t[a] = r + self.gamma * pTarget_[i][ np.argmax(p_[i]) ]    # Double DQN
+                #t[a] = r + self.gamma * pTarget_[i][ np.argmax(p_[i]) ]    # Double DQN
                 #t[a] = r + self.gamma * np.amax(pTarget_[i])               # Target DQN
-                #t[a] = r + self.gamma * np.amax(p_[i])                     # DQN
+                t[a] = r + self.gamma * np.amax(p_[i])                     # DQN
 
             x[i] = s
             y[i] = t
+            errors[i] = abs(oldVal - t[a])
+
+        return (x, y, errors)
+
+    # Replay saved data
+    def replay(self):
+        batch = self.memory.sample(self.batchSize)
+
+        x, y, errors = self.getTargets(batch)
+
+        #update errors
+        for i in range(len(batch)):
+            idx = batch[i][0]
+            self.memory.update(idx, errors[i])
 
         self.brain.train(x, y, self.batchSize)
 
@@ -98,7 +116,7 @@ class Agent:
 
         # Save variables
         with open(file + '.pkl', 'wb') as f:
-            pickle.dump([self.episode, self.epsilon, self.steps, self.uid, self.rewards, self.memory.samples], f)
+            pickle.dump([self.episode, self.epsilon, self.steps, self.uid, self.rewards, self.memory.tree], f)
 
     # Load model
     def loadModel(self, modelDir):
@@ -119,8 +137,9 @@ class Agent:
 
             # Read variables
             with open( file.replace(".h5","") + '.pkl', 'rb') as f:
-                self.episode, self.epsilon, self.steps, self.uid, self.rewards, self.memory.samples = pickle.load(f)
+                self.episode, self.epsilon, self.steps, self.uid, self.rewards, self.memory.tree = pickle.load(f)
 
+            self.memory.len = self.memory.tree.capacity
             self.episode += 1
             print("\n\nFile " + file.replace(modelDir + "/", "") + " succesfuly loaded")
             print("Continue training in episode " + str(self.episode) + "\n")

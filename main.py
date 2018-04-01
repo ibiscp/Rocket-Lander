@@ -1,13 +1,19 @@
 import numpy as np
 import gym
 from gym import wrappers as wr
-from agent import Agent
 import time
+
+# Define if using memoryTree or not
+memoryTree = False
+if memoryTree:
+    from agentTree import Agent
+else:
+    from agent import Agent
 
 # Agent
 gamma = 0.99                        # reward discount factor
 learning_rate = 0.00025             # learning rate
-num_episodes = 30000                # number of episodes to train
+num_episodes = 10000                # number of episodes to train
 update_target = 10000  #1000        # steps to update target model
 epsilon_start = 1.0                 # start epsilon
 epsilon_end = 0.01                  # minimum epsilon
@@ -15,24 +21,24 @@ epsilon_decay = 0.00001             # speed of decay
 save_model_episode = 100            # interval to save model
 
 # Brain
-batch_size = 128 #128                # size of batch from experience replay memory for updates
+batch_size = 64 #128                # size of batch from experience replay memory for updates
 
 # Memory
-memory_capacity = 200000 # 100000   # capacity of experience replay memory
+memory_capacity = 100000 # 100000   # capacity of experience replay memory
 
 # Environment
-environment = 'BeamRider-ram-v0' #'RocketLander-v0'     # Environment name
+environment = 'LunarLander-v2' #'RocketLander-v0'     # Environment name
 
 # folders
 monitorDir = 'videos'
 modelDir = 'models'
 
 # Start environment
-env = gym.make(environment).unwrapped
+env = gym.make(environment)
 
 # State and action variables
-stateCnt  = env.observation_space.shape[0]
-actionCnt = env.action_space.n
+stateCnt  = env.env.observation_space.shape[0]
+actionCnt = env.env.action_space.n
 
 # set seeds to 0
 env.seed(0)
@@ -44,15 +50,6 @@ epsilon_start, epsilon_end, epsilon_decay, learning_rate, environment, gamma)
 
 # Load model if exists
 agent.loadModel(modelDir)
-
-# import os
-# import matplotlib.pyplot as plt
-# observation = env.reset()
-# print(observation)
-# image = env.render(mode='rgb_array')
-#
-# print(image.shape())
-# os.system("pause")
 
 # Populate memory
 while agent.memory.numberSamples() < memory_capacity:
@@ -68,11 +65,11 @@ while agent.memory.numberSamples() < memory_capacity:
         next_state, reward, done, _ = env.step(action)
         reward = np.clip(reward, -1, 1)
 
-        # use reward as error
-        error = abs(reward)
-
         # observe
-        agent.memory.add(error, (state, action, reward, None if done else next_state))
+        if memoryTree:
+            agent.memory.add(abs(reward), (state, action, reward, None if done else next_state))
+        else:
+            agent.memory.add((state, action, reward, None if done else next_state))
 
         # update next sate
         state = next_state

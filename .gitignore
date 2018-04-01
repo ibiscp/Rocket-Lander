@@ -1,13 +1,8 @@
 .ipynb_checkpoints
 __pycache__
-models
-models2
-models3
+Double-Target-DQN-NormalMemory
+DQN-MemoryTree
+DQN-NormalMemory
+Target-DQN-NormalMemory
 oldfiles
 videos
-videos2
-videos3
-videos4
-rocket files
-CartPole model
-CartPole videos
