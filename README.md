@@ -128,7 +128,7 @@ A problem of this method is that it slow down the learning process. A change in 
 Double learning
 ---------------
 
-One problem of DQN algorithm is presented in [@doubleQLearning] and states that the agent tends to overestimate the Q function value, due to the $max$ in the formula. The problem is that for a given state where all the actions have the same true Q value, but the estimate is inherently noisy, the value with the highest positive error is selected and subsequently propagated further to other states. This leads to positive bias (value overestimation) and it severely impacts on stability of the learning algorithm.
+One problem of DQN algorithm is that the agent tends to overestimate the Q function value, due to the $max$ in the formula. The problem is that for a given state where all the actions have the same true Q value, but the estimate is inherently noisy, the value with the highest positive error is selected and subsequently propagated further to other states. This leads to positive bias (value overestimation) and it severely impacts on stability of the learning algorithm.
 
 The solution proposed is to use two separate Q functions, one function is then used to determine the maximizing action and second to estimate its value. In this algorithm because the target network is being used, $Q^*$ is not completely independent of $Q$, however, it can be used to avoid this problem, changing the formula to:
 
@@ -139,7 +139,7 @@ Besides the Double Deep Q Network (DDQN) does not always improve performance, it
 Prioritize experience replay
 ----------------------------
 
-Another improvement also possible is to change the way the memory is used to generate the batches to train, instead of generating a random batch, it is possible to select those samples that it can learn more with [@prioritizedExperienceReplay].
+Another improvement also possible is to change the way the memory is used to generate the batches to train, instead of generating a random batch, it is possible to select those samples that it can learn more with.
 
 In order to attribute a value for the samples, it is necessary to calculate an error between the $Q(s,a)$ and its target $T(S)$:
 
@@ -153,7 +153,7 @@ After having the error, it is necessary to convert this error to priority and th
 
 $$p = (error + \epsilon)^\alpha$$
 
-The values $\epsilon$ and $\alpha$ of this formula are constant values. The value $\epsilon$ is a small number only to ensure that no transition has zero probability. And $\alpha$, can be a value between $0$ and $1$, controls the difference between high and low error.
+The values $\epsilon$ and $\alpha$ of this formula are constant values. The value $\epsilon$ is a small number only to ensure that no transition has zero probability. And $\alpha$, can be a value between 0 and 1, controls the difference between high and low error.
 
 Implementation
 ==============
@@ -180,7 +180,7 @@ Each experience saved to the memory have the following information:
 Brain
 -----
 
-The Brain class encapsulates the Neural Network. It is defined with [2]{} hidden layers with [512]{} neurons each and ReLU activation function. The input number of neurons is the number of states and the output number of neuros is the number of possible actions.
+The Brain class encapsulates the Neural Network. It is defined with 2 hidden layers with 512 neurons each and ReLU activation function. The input number of neurons is the number of states and the output number of neuros is the number of possible actions.
 
 For the loss it is using the Huber loss function, it is a loss function used in robust regression that is less sensitive to outliers in data than the squared error loss.
 
